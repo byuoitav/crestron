@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func (m *Matrix) AudioVideoInputs(ctx context.Context) (map[string]string, error) {
@@ -29,8 +31,6 @@ func (m *Matrix) AudioVideoInputs(ctx context.Context) (map[string]string, error
 	if len(lines) == 0 {
 		return nil, fmt.Errorf("invalid response:\n%s", resp)
 	}
-
-	fmt.Printf("len(lines): %d\n", len(lines))
 
 	inputs := make(map[string]string)
 
@@ -79,4 +79,34 @@ func (m *Matrix) AudioVideoInputs(ctx context.Context) (map[string]string, error
 	}
 
 	return inputs, nil
+}
+
+func (m *Matrix) SetAudioVideoInput(ctx context.Context, output, input string) error {
+	outputNum, err := strconv.Atoi(output)
+	if err != nil {
+		return fmt.Errorf("unable to convert output to number: %w", err)
+	}
+
+	// i do really hate crestron for this
+	outputNum = outputNum - m.OutputSlotStart + m.SetRouteOutputStart
+	cmd := []byte(fmt.Sprintf("setavuroute %s %d\r\n", input, outputNum))
+
+	resp, err := m.sendCommand(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	str := string(resp)
+
+	switch {
+	case strings.Contains(str, "Invalid Output"):
+		return fmt.Errorf("invalid output")
+	case strings.Contains(str, "Invalid Input"):
+		return fmt.Errorf("invalid input")
+	}
+
+	// wait a little so that it takes effect
+	time.Sleep(2 * m.pool.Delay)
+
+	return nil
 }

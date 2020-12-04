@@ -19,11 +19,22 @@ const (
 type Matrix struct {
 	pool *connpool.Pool
 	log  *zap.Logger
+
+	// OutputSlotStart is the number that this switcher starts its output slot
+	// numbers on when you run `dumpdmrouteinfo`. For example,
+	// if the first output card is slot 33, this number should be 33.
+	OutputSlotStart int
+
+	// SetRouteOutputStart this is some ...randomly generated number that crestron uses
+	// when you run setavroute. You can find the number by running `cards` - it should be output ID that
+	// matches the card at OutputSlotStart (ie, running `setavroute <input> SetRouteOutputStart` should affect
+	// the output at OutputSlotStart).
+	SetRouteOutputStart int
 }
 
 func New(addr string, opts ...Option) Matrix {
 	options := &options{
-		ttl:   30 * time.Second,
+		ttl:   60 * time.Second,
 		delay: 500 * time.Millisecond,
 		log:   zap.NewNop(),
 	}
